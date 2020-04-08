@@ -9,22 +9,16 @@ import {
 import Modal from 'react-bootstrap/Modal'
 import Button from 'react-bootstrap/Button'
 
-const geoUrl =
-    "https://raw.githubusercontent.com/zcreativelabs/react-simple-maps/master/topojson-maps/world-110m.json";
+import { scaleLinear } from "d3-scale";
 
-const fetchGeographies = (url) => {
-return fetch(url)
-    .then(res => {
-    if (!res.ok) {
-        throw Error(res.statusText)
-    }
-    return res.json()
-    }).catch(error => {
-    console.log("There was a problem when fetching the data: ", error)
-    })
-}
+// const geoUrl = "https://raw.githubusercontent.com/zcreativelabs/react-simple-maps/master/topojson-maps/world-110m.json";
+const geoUrl = "https://raw.githubusercontent.com/zcreativelabs/react-simple-maps/master/topojson-maps/world-10m.json";
 
-const geographies = fetchGeographies(geoUrl);
+const colorScale = scaleLinear()
+    .domain([0, 400000])
+    .range(["#ffedea", "#ff5233"]);
+
+    
 
 const rounded = num => {
     if (num > 1000000000) {
@@ -42,18 +36,52 @@ class MapChart extends Component {
 
     constructor(props) {
         super(props);
-        this.state = { showModal: false };
+        this.state = { showModal: false, mapData: null };
     }
 
-    test() {
-        alert("ok");
+    componentDidMount() {
+        fetch(geoUrl).then(res => {
+            if (!res.ok) {
+                console.log("couldn't fetch map data");
+                throw Error(res.statusText);
+            }
+            return res.json();
+        }).then(result => {
+            let mapGeos = null;
+            let mapData = {};
+            let countries = "";
+            
+            mapGeos = result.objects.ne_10m_admin_0_countries.geometries.map(country => {
+                country = country.properties;
+                if(country.ISO_A3 == "-99")
+                    console.log(country.NAME + " fail");
+                return country.ISO_A3;
+            });
+
+            countries = mapGeos.join(",");
+
+            fetch("https://corona.lmao.ninja/v2/historical/" + countries + "&lastdays=30").then(res => {
+                if (!res.ok) {
+                    console.log("couldn't fetch covid data");
+                    throw Error(res.statusText);
+                }
+                return res.json();
+            }).then(result => {
+                for(var i =0; i<mapGeos.length; i++){
+                    mapData[mapGeos[i]] = { country: result[i].country, timeline: result[i].timeline }
+                }
+                this.setState({ mapGeos: mapGeos,  mapData: mapData});
+            });
+
+            
+        });
+
+
     }
 
     render() {
         const hideModal = () => {
             this.setState({ showModal: false });
-            this.setState({ class: "default" });
-            this.test();
         };
         return (
             <>
@@ -61,7 +89,7 @@ class MapChart extends Component {
                     <Modal.Header closeButton>
                         <Modal.Title>Modal heading</Modal.Title>
                     </Modal.Header>
-                    <Modal.Body>Woohoo {this.x}, you're reading this text in a modal!</Modal.Body>
+                    <Modal.Body>Woohoo, you're reading this text in a modal!</Modal.Body>
                     <Modal.Footer>
                         <Button variant="secondary" onClick={hideModal}>
                             Close
@@ -71,7 +99,6 @@ class MapChart extends Component {
                         </Button>
                     </Modal.Footer>
                 </Modal>
-                <div>wtf</div>
 
                 <ComposableMap data-tip="" projectionConfig={{ scale: 200 }}>
                     <ZoomableGroup>
@@ -79,27 +106,20 @@ class MapChart extends Component {
                             {
                                 ({ geographies }) => geographies.map(
                                     geo => {
-                                        console.log(geo.properties.ISO_A3);
+                                        let iso3 = geo.properties.ISO_A3;
+                                        let count = 300000000;
+                                        if(this.state.mapData !== null){
+                                            count = this.state.mapData[iso3].timeline !== undefined ? this.state.mapData[geo.properties.ISO_A3].timeline.cases["4/7/20"]: 0;
+                                        }
+                                        
                                         return (
-                                            <Geography key={geo.rsmKey} geography={geo} onClick={() => {
+                                            <Geography key={geo.rsmKey} fill={colorScale(count)} geography={geo} onClick={() => {
                                                 const { NAME, POP_EST } = geo.properties;
                                                 this.setState({ showModal: true });
+                                                alert(this.state.mapData[geo.properties.ISO_A3].timeline.cases["4/7/20"]);
                                                 // setTooltipContent(`${NAME} — ${rounded(POP_EST)}`);
                                             }} onMouseLeave={() => {
-                                                this.setState({ class: "default" });
-                                            }} style={{
-                                                default: {
-                                                    fill: "#D6D6DA",
-                                                    outline: "none"
-                                                },
-                                                hover: {
-                                                    fill: "#F53",
-                                                    outline: "none"
-                                                },
-                                                pressed: {
-                                                    fill: "#E42",
-                                                    outline: "none"
-                                                }
+                                                // this.setState({ class: "default" });
                                             }} />)
                                     }
                                 )
