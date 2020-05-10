@@ -18,18 +18,6 @@ const colorScale = scaleLinear()
     .domain([0, 400000])
     .range(["#ffedea", "#ff5233"]);
 
-    
-
-const rounded = num => {
-    if (num > 1000000000) {
-        return Math.round(num / 100000000) / 10 + "Bn";
-    } else if (num > 1000000) {
-        return Math.round(num / 100000) / 10 + "M";
-    } else {
-        return Math.round(num / 100) / 10 + "K";
-    }
-};
-
 
 class MapChart extends Component {
     x = 5;
@@ -103,26 +91,33 @@ class MapChart extends Component {
                 <ComposableMap data-tip="" projectionConfig={{ scale: 200 }}>
                     <ZoomableGroup>
                         <Geographies geography={geoUrl}>
-                            {
-                                ({ geographies }) => geographies.map(
-                                    geo => {
-                                        let iso3 = geo.properties.ISO_A3;
-                                        let count = 300000000;
-                                        if(this.state.mapData !== null){
-                                            count = this.state.mapData[iso3].timeline !== undefined ? this.state.mapData[geo.properties.ISO_A3].timeline.cases["4/7/20"]: 0;
-                                        }
-                                        
-                                        return (
-                                            <Geography key={geo.rsmKey} fill={colorScale(count)} geography={geo} onClick={() => {
-                                                const { NAME, POP_EST } = geo.properties;
-                                                this.setState({ showModal: true });
-                                                alert(this.state.mapData[geo.properties.ISO_A3].timeline.cases["4/7/20"]);
-                                                // setTooltipContent(`${NAME} — ${rounded(POP_EST)}`);
-                                            }} onMouseLeave={() => {
-                                                // this.setState({ class: "default" });
-                                            }} />)
-                                    }
-                                )
+                            {({ geographies }) => geographies.map(geo => {
+                                let iso3 = geo.properties.ISO_A3;
+                                let count = 0;
+                                let countFormatted = "";
+                                if(this.state.mapData !== null){
+                                    count = this.state.mapData[iso3].timeline !== undefined ? this.state.mapData[geo.properties.ISO_A3].timeline.cases["5/9/20"]: 0;
+                                    countFormatted = count.toLocaleString(navigator.language, { minimumFractionDigits: 0 });
+                                }
+                                    
+                                return (
+                                    <Geography
+                                        key={geo.rsmKey}
+                                        fill={colorScale(count)}
+                                        geography={geo} 
+                                        onClick={() => {
+                                            const { NAME, POP_EST } = geo.properties;
+                                            this.setState({ showModal: true });
+                                        }}
+                                        onMouseEnter={ () => {
+                                            const { NAME, POP_EST } = geo.properties;
+                                            this.props.setTooltipContent(NAME + ", " + countFormatted);
+                                        }}
+                                        onMouseLeave={() => {
+                                            this.props.setTooltipContent("");
+                                        }}
+                                    />)
+                                })
                             }
                         </Geographies>
                     </ZoomableGroup>

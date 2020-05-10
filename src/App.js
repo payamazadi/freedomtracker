@@ -13,15 +13,15 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 class App extends Component {
     constructor(props) {
         super(props);
-        this.state = { content: "sdf" };
+        this.state = { content: "" };
     }
 
     render() {
         return (
             <div>
-                {/* <MapChart setTooltipContent={(x) => this.setState({ content: x })} /> */}
-                <MapChart  />
-                {/* <ReactTooltip>{this.state.content}</ReactTooltip> */}
+                <MapChart setTooltipContent={(x) => this.setState({ content: x })} />
+                {/* <MapChart  /> */}
+                <ReactTooltip>{this.state.content}</ReactTooltip>
                 
             </div>
 
